@@ -1,4 +1,4 @@
-import { replaceTokens, convertToISODate, getConfigTruth } from './variables.js';
+import { replaceTokens, convertToISODate, getConfigTruth , readVariables} from './variables.js';
 
 export function extractJsonLd(parsedJson) {
   const jsonLd = { };
@@ -18,7 +18,7 @@ export function extractJsonLd(parsedJson) {
   return parsedJson;
 }
 
-export function createJSON() {
+export async function createJSON() {
   const dc = {};
   const co = {};
 
@@ -52,8 +52,30 @@ export function createJSON() {
     }
   });
 
+  window.siteConfig["$meta:author$"] ??= window.siteConfig["$company:name$"];
+
+  if (getConfigTruth('$meta:wantbiovariables$')) {
+    let bioConfig = window.siteConfig?.["$meta:author$"];
+    if (bioConfig) {
+      bioConfig = bioConfig.replaceAll(" ", "-").toLowerCase();
+      await readVariables(`${window.location.origin}/bio/${bioConfig}.json`);
+    }
+  }
+  if (window.siteConfig?.["$meta:command$"]) {
+    const commands = window.siteConfig["$meta:command$"].split(";");
+    // eslint-disable-next-line no-restricted-syntax
+    for (const command of commands) {
+      const phrase = command.split("=");
+      if (phrase.length === 2) {
+        // eslint-disable-next-line prefer-destructuring, semi
+        window.siteConfig[`$${phrase[0].trim().toLowerCase()}$`] =
+          phrase[1].trim();
+      }
+    }
+  }
+
   // fix up missing configs
-  window.siteConfig['$meta:author$'] ??= window.siteConfig['$company:name$'];
+
   window.siteConfig['$meta:contentauthor$'] ??= window.siteConfig['$meta:author$'];
   window.siteConfig['$meta:pagename$'] ??= window.siteConfig['$page:name$'];
   window.siteConfig['$meta:longdescription$'] ??= window.siteConfig['$meta:description$'];
@@ -63,17 +85,26 @@ export function createJSON() {
   }
   window.siteConfig['$meta:category'] ??= 'none';
 
-  if (window.siteConfig['$meta:command$'] !== undefined) {
-    const commands = (window.siteConfig['$meta:command$'].split(';'));
-    // eslint-disable-next-line no-restricted-syntax
-    for (const command of commands) {
-      const phrase = command.split('=');
-      if (phrase.length === 2) {
-        // eslint-disable-next-line prefer-destructuring, semi
-        window.siteConfig[`$${phrase[0].trim().toLowerCase()}$`] = phrase[1].trim();
+
+
+    if (!window.siteConfig?.["$meta:json-ld$"]) {
+      if (window.siteConfig["$meta:json+ld$"]) {
+        window.siteConfig["$meta:json-ld$"] =
+          window.siteConfig["$meta:json+ld$"];
+      } else {
+        if (window.siteConfig["$meta:ld+json$"]) {
+          window.siteConfig["$meta:json-ld$"] =
+            window.siteConfig["$meta:ld+json$"];
+        } else {
+          if (window.siteConfig["$meta:jsonld$"]) {
+            window.siteConfig["$meta:json-ld$"] =
+              window.siteConfig["$meta:jsonld"];
+          } else {
+            window.siteConfig["$meta:json-ld$"] = "owner";
+          }
+        }
       }
     }
-  }
 
   if (window.siteConfig?.['$meta:category$'] === 'home') {
     window.siteConfig['$meta:category$'] = 'none';
@@ -149,42 +180,31 @@ export function createJSON() {
 }
 
 export async function handleMetadataJsonLd() {
-  let jsonString = '';
-  if (!document.querySelector('script[type="application/ld+json"]')) {
-    let jsonLdMetaElement = document.querySelector('meta[name="json-ld"]');
-    if (!jsonLdMetaElement) {
-      jsonLdMetaElement = document.createElement('meta');
-      jsonLdMetaElement.setAttribute('name', 'json-ld');
-      jsonLdMetaElement.setAttribute('content', 'owner');
-      document.head.appendChild(jsonLdMetaElement);
-    }
-    const content = jsonLdMetaElement.getAttribute('content');
-    jsonLdMetaElement.remove();
-    // assume we have an url, if not we have a role -  construct url on the fly
-    let jsonDataUrl = content;
 
+  // assume we have an url, if not we have a role -  construct url on the fly
+  let content = window.siteConfig['$meta:json-ld$'];
     try {
       // Attempt to parse the content as a URL
       // eslint-disable-next-line no-new
       new URL(content);
     } catch (error) {
       // Content is not a URL, construct the JSON-LD URL based on content and current domain
-      jsonDataUrl = `${window.location.origin}/config/json-ld/${content}.json`;
+      content = `${window.location.origin}/config/json-ld/${content}.json`;
     }
     try {
-      const resp = await fetch(jsonDataUrl);
+      const resp = await fetch(content);
       if (!resp.ok) {
         throw new Error(`Failed to fetch JSON-LD content: ${resp.status}`);
       }
       let json = await resp.json();
       json = extractJsonLd(json);
-      jsonString = JSON.stringify(json, null, '\t');
+      let jsonString = JSON.stringify(json, null, '\t');
       jsonString = replaceTokens(window.siteConfig, jsonString);
       // Create and append a new script element with the processed JSON-LD data
       const script = document.createElement('script');
       script.type = 'application/ld+json';
       script.setAttribute('data-role', content.split('/').pop().split('.')[0]); // Set role based on the final URL
-      jsonLdMetaElement.setAttribute('id', 'ldMeta');
+      script.setAttribute('id', 'ldMeta');
       script.textContent = jsonString;
       document.head.appendChild(script);
       document.querySelectorAll('meta[name="longdescription"]').forEach((section) => section.remove());
@@ -194,6 +214,3 @@ export async function handleMetadataJsonLd() {
       console.log('Error processing JSON-LD metadata:', error);
     }
   }
-
-  return jsonString;
-}

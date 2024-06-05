@@ -1,20 +1,8 @@
 /* eslint-disable no-restricted-syntax */
 /* site configuration module */
-/*
 
-   ++++++++++++++++++++++++++++++++++++++++++++++++++
 
-   NOTHING iN HERE CAN USE OR DERIVE FROM siteConfig
-   until you are sure you know what you are doing
-   i.e no use of siteConfig['$meta:author$'] etc
-   The stuff in here has to be super fast
-   do not use ffetch or loading 3rd party libs
-   all such things should be done in their own plugin
-   after the call to createJSON is done siteConfig[...]
-   is ok
-   ++++++++++++++++++++++++++++++++++++++++++++++++++
-
-*/
+let releaseVersion = 'plusplus 1.0.1';
 
 import {
   tidyDOM,
@@ -39,49 +27,60 @@ import { } from './externalImage.js';
 
 await import('/config/config.js');
 
+import { createExpression } from "/plusplus/plugins/expressions/src/expressions.js";
+createExpression("expand", ({ args }) => {
+  return window.siteConfig?.[args];
+});
+
 function noAction() {
 }
 export async function initializeSiteConfig() {
 // Determine the environment and locality based on the URL
   const getEnvironment = () => {
-  // Define an array of environments with their identifying substrings in the URL
+    // Define an array of environments with their identifying substrings in the URL
+
+    // An Environment is defined as a normal place to serve Helix Content
     const environments = [
-      { key: '.html', value: 'final' },
-      { key: 'hlx.page', value: 'preview' },
-      { key: 'hlx.live', value: 'live' },
+      { key: '.hlx.page', value: 'preview' },
+      { key: '.hlx.live', value: 'live' },
+      { key: '.aem.page', value: 'preview' },
+      { key: '.aem.live', value: 'live' },
     ];
 
     for (const env of environments) {
-      if (window.location.href.includes(env.key)) {
+      if (window.location.hostname.includes(env.key)) {
         return env.value;
       }
     }
-    // If no match is found, it defaults to 'final'
-    return 'final';
+    // If no match is found, it defaults to 'live' - hardest case.
+    return 'live';
   };
 
+  // a locality is defined as a place to serve Helix Content for a regulated industry
   const getLocality = () => {
-    const environments = [
-      { key: 'localhost', value: 'local' },
-      { key: 'stage', value: 'stage' },
-      { key: 'fastly', value: 'preprod' },
-      { key: 'preprod.', value: 'preprod' },
-      { key: 'prod', value: 'prod' },
-      { key: 'dev', value: 'dev' },
+    const localities = [
+      { key: "localhost", value: "local" },
+      { key: "127.0.0.1", value: "local" },
+      { key: "-stage", value: "stage" },
+      { key: "fastly", value: "preprod" },
+      { key: "preprod.", value: "preprod" },
+      { key: "-prod", value: "prod" },
+      { key: "-dev", value: "dev" },
     ];
-    for (const env of environments) {
-      if (window.location.href.includes(env.key)) {
+    for (const env of localities) {
+      if (window.location.hostname.includes(env.key)) {
         return env.value;
       }
     }
 
-    // Return 'unknown' if no environment matches
-    return 'unknown';
+    // Return 'prod' if no environment matches -- hardest case.
+    return 'prod';
   };
 
   window.cmsplus = {
     environment: getEnvironment(),
     locality: getLocality(),
+    release: releaseVersion,
   };
   window.cmsplus.callbackPageLoadChain = [];
   window.cmsplus.callbackAfter3SecondsChain = [];
@@ -91,7 +90,7 @@ export async function initializeSiteConfig() {
   possibleMobileFix('hero');
   await constructGlobal();
   swiftChangesToDOM();
-  await createJSON();// *********   siteConfig is ready now *******
+  await createJSON();
   await initializeClientConfig();
   if (window.cmsplus.environment === 'preview') {
     import('./debugPanel.js');
@@ -99,10 +98,6 @@ export async function initializeSiteConfig() {
 
   // all configuration completed, make any further callbacks from here
 
-  // attempt at overwriting the loadDelayed function
-  // window.cmsplus.loadDelayed = function loadDelayed() {
-  // window.setTimeout(() => import('../delayed.js'), 3000;
-  // };
 
   await tidyDOM();
   await handleMetadataJsonLd();
@@ -116,4 +111,4 @@ export async function initializeSiteConfig() {
     await callback();
   }
 }
-initializeSiteConfig();
+await initializeSiteConfig();

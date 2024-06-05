@@ -20,7 +20,9 @@ What does it add:
   - local,
   - dev environments
 - inclusion of helpful code from block-party <https://www.aem.live/developer/block-collection#block-party> : - Modal, ffetch, DOM-helpers, External - Images
-- Inclusion of experimentation, through git subtree add <https://github.com/adobe/aem-experimentation/wiki/Experiments#authoring>
+- Inclusion of experimentation, expressions through
+ git subtree add <https://github.com/adobe/aem-experimentation/wiki/Experiments#authoring>
+ git subtree add --squash  --prefix plugins/expressions  <https://github.com/vtsaplin/franklin-expressions/> main
 
 Smart algorithms to:
 
@@ -30,7 +32,7 @@ Smart algorithms to:
 - dynamically add height to SVG icons
 - add scripts on the fly to a page (inject mechanism)
 - remove unnecessary title elements from images
-- Change Styling if coming-soon is present in the page, by adding class hide to the body
+- Change Styling if coming-soon is present on the page by adding class hide to the body
 - Adds button role to every link with a class button
 - Adds 'target blank' to every external link on the page
 - Adds 'current class' to any link to the current page
@@ -42,14 +44,14 @@ The final plusplus environment also requires configuration see <https://github.c
 
 Use GitHub cli to help fork and create your project <https://github.com/cli/cli>  <https://cli.github.com/manual/>
 
-In the below instructions, replace WEBSITENAME with the name of your new Rep.  If I were creating ddttom.com, I would use 
+In the below instructions, replace {FORKNAME} with the name of your new Repo.  If I were creating ddttom.com, I would use
 
-gh repo fork --fork-name ddttom https://github.com/adobe/aem-boilerplate.git
+gh repo fork --fork-name ddttom <https://github.com/adobe/aem-boilerplate.git>
 
 ```sh
 
-gh repo fork --fork-name WEBSITENAME https://github.com/adobe/aem-boilerplate.git
-cd WEBSITENAME
+gh repo fork --fork-name {FORKNAME} https://github.com/adobe/aem-boilerplate.git
+cd {FORKNAME}
 git subtree add --squash  --prefix config  https://github.com/Digital-Domain-Technologies-Ltd/plusplusconfig main
 git subtree add --squash  --prefix plusplus  https://github.com/Digital-Domain-Technologies-Ltd/plusplus main
 git subtree add --squash  --prefix tools  https://github.com/Digital-Domain-Technologies-Ltd/plusplustools main
@@ -67,5 +69,39 @@ git subtree pull --squash --prefix config  https://github.com/Digital-Domain-Tec
 git subtree pull --squash --prefix plusplus  https://github.com/Digital-Domain-Technologies-Ltd/plusplus main
 
 git subtree pull --squash --prefix tools  https://github.com/Digital-Domain-Technologies-Ltd/plusplustools main
+
+
+
+
+```
+
+## Problem Solving
+
+sometimes you get a false error, *fatal: working tree has modifications.  Cannot add.*
+
+If this happens use the command
+
+```sh
+
+git status
+
+```
+
+if the response is similar to
+
+```sh
+
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+
+```
+
+use this command to fix and try again
+
+```sh
+
+git update-index --refresh
+
 
 ```
