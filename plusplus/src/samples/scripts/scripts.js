@@ -202,7 +202,6 @@ async function loadPage() {
     document.body.querySelector('header').remove();
     document.body.querySelector('footer').remove();
   }
-
   await loadEager(document);
   await loadLazy(document);
   loadDelayed();
