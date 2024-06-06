@@ -6,7 +6,7 @@
 
 import {
   decorateMain,
-} from '../../scripts/scripts.js';
+} from '../../plusplus/src/samples/scripts/scripts.js';
 
 import {
   loadBlocks,
